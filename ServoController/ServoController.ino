@@ -38,7 +38,7 @@
 
 
 //program variables
-#define MAXCURRENT 1.5 //peak rotational current. Actual max current hit may be slightly higher
+#define MAXCURRENT 0.2 //peak rotational current. Actual max current hit may be slightly higher
 
 
 volatile long encoderTicks = 0;
@@ -49,7 +49,8 @@ bool lastRev = 0; //last reverse bool
 bool stateChangeFlag = 0; //keeps track if coils are changing
 int state = 0; //current coil state, from 0 to 5
 double correctedOutput = 0;
-int currentThresh = MAXCURRENT * 124.1212; //converts amps to analog steps for 12bit ADC
+uint16_t currentThresh = MAXCURRENT * 124.1212; //converts amps to analog steps for 12bit ADC
+bool coilGndFlag = 0;
 
 //PID defs
 unsigned long lastTime;
@@ -117,9 +118,22 @@ void loop()
     moveMotor();
   }
   disableMotor();
-  delay(500);
+  delay(2000);
   Output *= -1;
 }
+
+//void loop()
+//{
+//  uint16_t cur1 = analogRead(current0);
+//  uint16_t cur2 = analogRead(current1);
+//  uint16_t cur3 = analogRead(current2);
+//  Serial.print(cur1);
+//  Serial.print(", ");
+//  Serial.print(cur2);
+//  Serial.print(", ");
+//  Serial.print(cur3);
+//  Serial.print("\n");
+//}
 
 
 //run loop
@@ -188,7 +202,6 @@ void loop()
 
 void moveMotor()
 {
-  long starttime = micros();
   bool reversed = 0;
   correctedOutput = Output;
 
@@ -254,21 +267,24 @@ void moveMotor()
   
   else //otherwise if same coil being used, check for overcurrent. If over, disable. If under, update pwm
   {
-    int coilCurrent = readCurrent(); //read current is very slow because analog read sucks
-//    if (coilCurrent > currentThresh) // !!! may need to fully ground coil instead of just cutting and making floating !!!
-//      disableMotor();
-//    else
-//      setPWM(correctedOutput);
+    uint16_t coilCurrent = readCurrent(); //read current is very slow because analog read sucks
+    if ((coilCurrent > currentThresh) && (!coilGndFlag)) //if current over thresh and previously below, ground all coils to eliminate current flow
+    {
+      disableMotor();
+      stateGND();
+      coilGndFlag = 1;
+    }
+    else if (coilGndFlag) //if curret below thresh and was previously above, turn back on and reset flag
+    {
+      setPWM(255);
+      coilGndFlag = 0;
+    }
   }
-  long endtme = micros();
-  if (!stateChangeFlag)
-    Serial.println(endtme - starttime);
 }
 
-void disableMotor()
+void disableMotor() //turns off all mosfets using registers
 {
-//  PORT->Group[PORTA].OUTCLR.reg = 111011000000010000000; //turns off all mosfets using registers
-
+//  PORT->Group[PORTA].OUTCLR.reg = 111011000000010000000; //not currently working but should be faster
   PORT->Group[PORTA].OUTCLR.reg = (1<<15);
   PORT->Group[PORTA].OUTCLR.reg = (1<<20);
   PORT->Group[PORTA].OUTCLR.reg = (1<<7);
@@ -321,9 +337,9 @@ void setPWM(double pwmfreq) //set pwm for new active coil
 //    analogWrite(motorN1, pwmfreq);
 //}
 
-int readCurrent() //read current for active mosfet
+uint16_t readCurrent() //read current for active mosfet
 {
-  int coilCurrent = 0;
+  uint16_t coilCurrent = 0;
   if ((state == 0) || (state == 1))
     coilCurrent = analogRead(current0);
   if ((state == 2) || (state == 3))
@@ -438,45 +454,46 @@ void newStep()
 }
 
 /* MOSFET STATES */
-void state0(double pwmfreq)
+void state0(double pwmfreq) //P2N3
 {
   PORT->Group[PORTA].OUTSET.reg = (1<<20);
   PORT->Group[PORTA].OUTSET.reg = (1<<19);
-//  PORT->Group[PORTA].OUTSET.reg = 110000000000000000000; //P2N3
 }
 
-void state1(double pwmfreq)
+void state1(double pwmfreq) //P1N3
 {
   PORT->Group[PORTA].OUTSET.reg = (1<<15);
   PORT->Group[PORTA].OUTSET.reg = (1<<19);
-//  PORT->Group[PORTA].OUTSET.reg = 10001000000000000000; //P1N3
 }
 
-void state2(double pwmfreq)
+void state2(double pwmfreq) //P1N2
 {
   PORT->Group[PORTA].OUTSET.reg = (1<<15);
   PORT->Group[PORTA].OUTSET.reg = (1<<16);
-//  PORT->Group[PORTA].OUTSET.reg = 11000000000000000; //P1N2
 }
 
-void state3(double pwmfreq)
+void state3(double pwmfreq) //P3N2
 {
   PORT->Group[PORTA].OUTSET.reg = (1<<7);
-  PORT->Group[PORTA].OUTSET.reg = (1<<16);
-//  PORT->Group[PORTA].OUTSET.reg = 10000000010000000; //P3N2
+  PORT->Group[PORTA].OUTSET.reg = (1<<16); 
 }
 
-void state4(double pwmfreq)
+void state4(double pwmfreq) //P3N1
 {
   PORT->Group[PORTA].OUTSET.reg = (1<<7);
   PORT->Group[PORTA].OUTSET.reg = (1<<18);
-//  PORT->Group[PORTA].OUTSET.reg = 1000000000010000000; //P3N1
 }
 
-void state5(double pwmfreq)
+void state5(double pwmfreq) //P2N1
 {
   PORT->Group[PORTA].OUTSET.reg = (1<<20);
   PORT->Group[PORTA].OUTSET.reg = (1<<18);
-//  PORT->Group[PORTA].OUTSET.reg = 101000000000000000000; //P2N1
+}
+
+void stateGND() //N1N2N3
+{
+  PORT->Group[PORTA].OUTSET.reg = (1<<16);
+  PORT->Group[PORTA].OUTSET.reg = (1<<18);
+  PORT->Group[PORTA].OUTSET.reg = (1<<19);
 }
 
