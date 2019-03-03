@@ -104,7 +104,7 @@ struct ServoMotor{
 	int32_t curTick;
 	int32_t setTick;
 	int16_t lastTick;
-	uint8_t dirPWM;
+	uint16_t dirPWM;
 	uint8_t curSet;	
 	bool enabled;
 };
@@ -178,7 +178,9 @@ int main(void)
 	
 	// FUNCTION VARS
 	struct ServoMotor servo0 = initServo(maxCur_A, curSenR, curDiv);
-	Servo_Set_PID(&servo0, 10, 0.01, 0.5);
+	Servo_Set_PID(&servo0, 15, 0, 3);
+	Servo_Update_Power(&servo0, 50);
+	Set_Current(servo0);
 	Enable_Motor(&servo0);
 
   /* USER CODE END 2 */
@@ -204,11 +206,18 @@ int main(void)
 		if (diff < min) min = diff;
 		*/
 		
+		// Update pos every 1s
+		if (HAL_GetTick() - startTime > 1000)
+		{
+			servo0.setTick += 100;
+			startTime = HAL_GetTick();
+		}
+		
 		encTicks = TIM1->CNT;
     Servo_Update_Position(&servo0, encTicks);
 		Servo_Calc_PID(&servo0);
 		Set_Dir_PWM(servo0);
-		//Serial_Send_Int(servo0.curTick);
+		Serial_Send_Int(servo0.dirPWM);
 		
     /* USER CODE END WHILE */
 
@@ -366,9 +375,9 @@ static void MX_TIM9_Init(void)
 
   /* USER CODE END TIM9_Init 1 */
   htim9.Instance = TIM9;
-  htim9.Init.Prescaler = 1000;
+  htim9.Init.Prescaler = 500;
   htim9.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim9.Init.Period = 255;
+  htim9.Init.Period = 1000;
   htim9.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   if (HAL_TIM_PWM_Init(&htim9) != HAL_OK)
   {
@@ -504,8 +513,8 @@ struct ServoMotor initServo(float maxCurrent_A, float curSenseR, float curSetDiv
 void Servo_Set_PID(struct ServoMotor *servo, float kp, float ki, float kd)
 {
 	servo->kp = kp;
-	servo->ki = ki;
-	servo->kd = kd;
+	servo->ki = ki / 100000;
+	servo->kd = kd * 100000;
 }
 
 void Servo_Update_Position(struct ServoMotor *servo, int16_t encTicks)
@@ -521,8 +530,8 @@ void Servo_Update_Position(struct ServoMotor *servo, int16_t encTicks)
 
 void Servo_Calc_PID(struct ServoMotor *servo)
 {
-	int16_t pwmMin = -128;
-	int16_t pwmMax = 127;
+	int16_t pwmMin = -500;
+	int16_t pwmMax = 500;
 	
 	int32_t error = servo->curTick - servo->setTick;
 	uint32_t tNow = micros();
@@ -536,6 +545,8 @@ void Servo_Calc_PID(struct ServoMotor *servo)
 	if (pwm < pwmMin) pwm = pwmMin;
 	if (pwm > pwmMax) pwm = pwmMax;
 	pwm += (-1 * pwmMin);
+	
+	pwm = (pwmMax + -pwmMin) - pwm;
 	
 	servo->dirPWM = pwm;
 	servo->lastError = error;

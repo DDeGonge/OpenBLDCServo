@@ -21,26 +21,26 @@ Target DLL:      STLink\ST-LINKIII-KEIL_SWO.dll V3.0.5.0
 Dialog DLL:      TCM.DLL V1.36.1.0
  
 <h2>Project:</h2>
-C:\Users\DDeGo\OneDrive\Projects\Brushless Motor Controller\BLDC mk4\MDK-ARM\BLDC mk4.uvprojx
+C:\Users\DDeGo\OneDrive\Projects\Brushless Motor Controller\OpenBLDCServo\OpenBLDC\MDK-ARM\BLDC mk4.uvprojx
 Project File Date:  02/27/2019
 
 <h2>Output:</h2>
 *** Using Compiler 'V5.06 update 6 (build 750)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
 Build target 'BLDC mk4'
 compiling main.c...
-../Src/main.c(72): warning:  #1295-D: Deprecated declaration micros - give arg types
+../Src/main.c(73): warning:  #1295-D: Deprecated declaration micros - give arg types
   uint32_t micros();
-../Src/main.c(174): warning:  #177-D: variable "tweaker"  was declared but never referenced
+../Src/main.c(175): warning:  #177-D: variable "tweaker"  was declared but never referenced
   	float tweaker = 0.0001;
-../Src/main.c(175): warning:  #177-D: variable "min"  was declared but never referenced
+../Src/main.c(176): warning:  #177-D: variable "min"  was declared but never referenced
   	int16_t min, max;
-../Src/main.c(175): warning:  #177-D: variable "max"  was declared but never referenced
+../Src/main.c(176): warning:  #177-D: variable "max"  was declared but never referenced
   	int16_t min, max;
-../Src/main.c(543): warning:  #1035-D: single-precision operand implicitly converted to double-precision
+../Src/main.c(560): warning:  #1035-D: single-precision operand implicitly converted to double-precision
   	servo->curSet = (uint8_t)((cur/3.0) * 255);
 ../Src/main.c: 5 warnings, 0 errors
 linking...
-Program Size: Code=9672 RO-data=512 RW-data=16 ZI-data=720  
+Program Size: Code=10208 RO-data=512 RW-data=16 ZI-data=720  
 FromELF: creating hex file...
 "BLDC mk4\BLDC mk4.axf" - 0 Error(s), 5 Warning(s).
 
@@ -65,7 +65,7 @@ Package Vendor: Keil
 <h2>Collection of Component Files used:</h2>
 
    * Component: ARM::CMSIS:CORE:5.1.2
-Build Time Elapsed:  00:00:02
+Build Time Elapsed:  00:00:01
 </pre>
 </body>
 </html>
